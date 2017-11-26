@@ -4,7 +4,9 @@
 #PART 1
 
 #CACHE SETUP HERE
+api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 
+CACHE_FNAME = " "
 #Utilize the API for a social media site or work tool of your choice 
 #(Facebook, GitHub, Instagram, Gmail, YouTube or any other site you have an active account with)
 #CAN'T BE TWITTER
