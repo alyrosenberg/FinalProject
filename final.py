@@ -35,6 +35,7 @@ CACHE_FNAME = " "
 #add graphics here
 
 #ADD ON A (ADD ADDITIONAL API SOURCES)
+#depending on how many points I want
 
 #ADD ON B (ADD ADDITIONAL data points)
 
