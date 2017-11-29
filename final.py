@@ -75,7 +75,7 @@ for event in GitHub_Events:
 
 
 
-#Dropping github table if it exists then initilizing github table
+#Dropping instagram table if it exists then initilizing github table
 cur.execute('DROP TABLE IF EXISTS Instagram_Posts')
 cur.execute('CREATE TABLE Instagram_Posts(id TEXT PRIMARY KEY, created_at TIMESTAMP, caption_text TEXT, likes INTEGER, lat INTEGER, lng INTEGER)')
 
