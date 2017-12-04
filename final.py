@@ -1,7 +1,7 @@
 import seaborn as sns
-import matplotlib.pyplot as plt
-%matplotlib inline
-plt.rcParams['figure.figsize'] = (15,9)
+#import matplotlib.pyplot as plt
+#%matplotlib inline
+#plt.rcParams['figure.figsize'] = (15,9)
 import json
 import sqlite3
 import pprint
@@ -52,13 +52,13 @@ def prep(value, typestring):
 	if typestring == "str":
 		if value == None:
 			return "_"
-        else:
-            return str(value)
-    if typestring == "int":
-        if value == None:
-            return "_"
-        else:
-            return int(value)
+		else:
+			return str(value)
+	if typestring == "int":
+		if value == None:
+			return "_"
+		else:
+			return int(value)
 
 #instagram
 print ('API #1: Instagram\n')
@@ -140,11 +140,11 @@ def query_github_directly(github_user_id = "alyrosenberg"):
 def query_github(github_user_id = "alyrosenberg"):
     return performsearch(github_user_id, query_github_directly)
 
+
+
 #create connection to local SQLite database for github
-
-#Dropping github table if it exists then initilizing github table
-
 cur.execute('DROP TABLE IF EXISTS GitHub_Events')
+#Dropping github table if it exists then initilizing github table
 cur.execute('CREATE TABLE GitHub_Events(id INTEGER PRIMARY KEY, created_at TIMESTAMP, type TEXT, repo_name TEXT)')
 
 GitHub_Events = query_github()
@@ -177,20 +177,19 @@ def query_OMDB_directly(movie_title):
 hi = query_OMDB_directly("star wars")
 
 #create SQL table from OMDB
-#fix this to be for movie
 def query_OMDB(movie_title):
     return performsearch(movie_title, query_OMDB_directly)
 
 cur.execute('DROP TABLE IF EXISTS OMDB_Movie')
 cur.execute('CREATE TABLE OMDB_Movie (title TEXT PRIMARY KEY, year INTEGER, genre TEXT, director TEXT, imdbrating REAL)')
 
-OMBD_Movie = query_OMDB(movie_title)
-for movie in OMDB_Movie:
+for movie in list_movies:
+    movieinfo = query_OMDB(movie)
+    printsequence(movie)
     cur.execute('INSERT INTO OMDB_Movie(title, year, genre, director, imdbrating) VALUES (?, ?, ?, ?,?)', 
-                (movie['Title'], movie['Year'], movie['Genre'], movie["Director"], movie['imdbRating']))
+                (movieinfo['Title'], movieinfo['Year'], movieinfo['Genre'], movieinfo["Director"], movieinfo['imdbRating']))
 
 conn.commit()
-
 
 #API 4 iTunes
 print ('\n------------------------------------\n')
