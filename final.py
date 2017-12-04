@@ -6,8 +6,19 @@ import json
 import sqlite3
 import pprint
 import requests
-import facebook
 import datetime
+import sys
+
+
+def skip_lines(num_lines):
+   for i in range(num_lines):
+       print("\n")
+
+def printsequence(x, skiplines=2):
+   print(x)
+   skip_lines(skiplines)
+   sys.stdout.flush()
+
 
 #creating a cache
 CACHE_FNAME = "206_finalproject.json"
@@ -19,11 +30,11 @@ try:
 except:
     CACHE_DICTION = {}
 
-
 #general function to put each API into
 def performsearch(search_term, api_query_function):
     cachekey = api_query_function.__name__ + "_" + search_term
     if cachekey in CACHE_DICTION:
+        print ("loading from cache")
         toreturn = CACHE_DICTION[cachekey]
     else:
         toreturn = api_query_function(search_term)
@@ -33,7 +44,21 @@ def performsearch(search_term, api_query_function):
         writefile.close()
     return toreturn
 
+#create connection to local SQLite database
+conn = sqlite3.connect('206_finalproject.sqlite')
+cur = conn.cursor()
 
+def prep(value, typestring):
+	if typestring == "str":
+		if value == None:
+			return "_"
+        else:
+            return str(value)
+    if typestring == "int":
+        if value == None:
+            return "_"
+        else:
+            return int(value)
 
 #instagram
 print ('API #1: Instagram\n')
@@ -41,10 +66,25 @@ print ('API #1: Instagram\n')
 instagram_access_token = "226042116.1677ed0.d72827a090bd4641a961139b7f04530b"
 
 def query_instagram_directly(search_term):
-    url = 'https://api.instagram.com/v1/users/self/media/recent/?access_token={}'.format(instagram_access_token)
+    posts = []
+    baseurl = 'https://api.instagram.com/v1/users/self/media/recent/'
+    payload = {'access_token' : instagram_access_token, 'count': 101}
     #response_string = requests.get(url).text
-    requests.get(base_url, params = {'apikey': info.IMDBapi_key, 't':title, 'season': '1'})
-    posts = json.loads(response_string)['data']
+    r = requests.get(baseurl, params = payload)
+    posttemp = r.json()['data']
+    posts = posts + posttemp
+    payload['max_id'] = r.json()['pagination']['next_max_id']
+    r = requests.get(baseurl, params = payload)
+    posttemp = r.json()['data']
+    posts = posts + posttemp
+    payload['max_id'] = r.json()['pagination']['next_max_id']
+    r = requests.get(baseurl, params = payload)
+    posttemp = r.json()['data']
+    posts = posts + posttemp
+    payload['max_id'] = r.json()['pagination']['next_max_id']
+    r = requests.get(baseurl, params = payload)
+    posttemp = r.json()['data']
+    posts = posts + posttemp
     #user_id = posts[0]['user']['id']
     return posts
 
@@ -52,32 +92,38 @@ def query_instagram():
     return performsearch("blah", query_instagram_directly)
 
 x = query_instagram()
-pprint.pprint(x)
+printsequence(len(x))
+
 
 #SQL table for instagram
+#Dropping Tweets table if it exists then initilizing Tweets table
 cur.execute('DROP TABLE IF EXISTS Instagram_Posts')
 cur.execute('CREATE TABLE Instagram_Posts(id TEXT PRIMARY KEY, created_at TIMESTAMP, caption_text TEXT, likes INTEGER, lat INTEGER, lng INTEGER)')
 
 Instagram_Posts = query_instagram()
 for post in Instagram_Posts:
-    print (post['id'])
-    print (post['created_time'])
-    print (post['caption']['text'])
-    print (post["likes"]['count'])
-    #print (post["location"]['latitude'])
-    try:
-        lattemp = post["location"]['latitude']
-        lngtemp = post["location"]['longitude']
-    except:
-        lattemp = ""
-        lngtemp = ""
-    if lattemp == None:
-        lattemp = ""
-    if lngtemp == None:
-        lngtemp = ""
+    if post == None:
+        continue    
+    currentid = post["id"]
+    created_time = post["created_time"]
+    caption = post["caption"]
+    caption_text = ""
+    if caption != None:
+        caption_text = caption["text"]
+    likes = post["likes"]
+    numlikes = 0
+    if likes != None:
+        numlikes = likes["count"]
+    lat = 0
+    long = 0
+    location = post['location']
+    if location != None:
+        lat = location['latitude']
+        long = location['longitude']
     formatteddatetime = datetime.date.fromtimestamp( int(post['created_time']) ).strftime('%Y-%m-%d %H:%M:%S')
-    print (post['id'], formatteddatetime, post['caption']['text'], post["likes"]['count'], post["location"]['latitude'], post["location"]['longitude'])
-    cur.execute('INSERT INTO Instagram_Posts(id, created_at, caption_text, likes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)', (post['id'], formatteddatetime, post['caption']['text'], post["likes"]['count'], lattemp, lngtemp))
+   # print (post['id'], formatteddatetime, post['caption']['text'], post["likes"]['count'], post["location"]['latitude'], post["location"]['longitude'])
+    cur.execute('INSERT INTO Instagram_Posts(id, created_at, caption_text, likes, lat, lng) VALUES (?, ?, ?, ?, ?, ?)', 
+                (currentid, formatteddatetime, caption_text, numlikes, lat, long))
     
 conn.commit()
 
@@ -95,10 +141,9 @@ def query_github(github_user_id = "alyrosenberg"):
     return performsearch(github_user_id, query_github_directly)
 
 #create connection to local SQLite database for github
-conn = sqlite3.connect('206_finalproject.sqlite')
-cur = conn.cursor()
 
 #Dropping github table if it exists then initilizing github table
+
 cur.execute('DROP TABLE IF EXISTS GitHub_Events')
 cur.execute('CREATE TABLE GitHub_Events(id INTEGER PRIMARY KEY, created_at TIMESTAMP, type TEXT, repo_name TEXT)')
 
@@ -114,8 +159,12 @@ conn.commit()
 print ('\n------------------------------------\n')
 print ('API #3: OMDB\n')
 
-movie_title = input("Enter your movie title: ")
-def query_OMDB_directly():
+#OMDB API
+
+#mykey = 3a894ff0
+
+list_movies = ['Mean Girls','Wonder Woman', 'Get Out', 'Star Wars', 'The Big Sick', 'Lady Bird', 'La La Land', 'It', 'Titanic', 'The Notebook', 'Love Actually']
+def query_OMDB_directly(movie_title):
     base_url = "http://www.omdbapi.com/?"
     params_dict = {}
     params_dict['t'] = movie_title
@@ -123,12 +172,11 @@ def query_OMDB_directly():
     r = requests.get(base_url, params=params_dict)
     responses = r.text
     final = json.loads(responses)
-    print(final)
+    printsequence(final)
 
-hi = query_OMDB_directly()
+hi = query_OMDB_directly("star wars")
 
 #create SQL table from OMDB
-
 #fix this to be for movie
 def query_OMDB(movie_title):
     return performsearch(movie_title, query_OMDB_directly)
@@ -144,76 +192,76 @@ for movie in OMDB_Movie:
 conn.commit()
 
 
-#API 4 google maps
-print ('\n------------------------------------\n')
-print ('API #4: Google Maps\n')
-
-origin = input("Enter your starting address: ")
-destination = input("Enter your destination address: ")
-
-def query_googlemaps_directly():
-    base_url = "https://maps.googleapis.com/maps/api/directions/json?"
-    params_dict = {}
-    params_dict['origin'] = origin
-    params_dict['key'] = "AIzaSyCTFY6AuSgxOcKsajYe7KFM6CIw20h-5Gc"
-    params_dict['destination'] = destination
-    r = requests.get(base_url, params=params_dict)
-    responses = r.text
-    final = json.loads(responses)
-    #distance = final['routes'][0]['legs'][0]['distance']['text']
-    #duration = final['routes'][0]['legs'][0]['duration']['text']
-    #print(distance)
-    #print(duration)
-    #pprint.pprint(final)
-    
-hi = query_googlemaps_directly()
-
-#this is my table for Google Maps API
-
-#fix this for maps
-def query_GoogleMaps(movie_title):
-    return performsearch(movie_title, query_OMDB_directly)
-
-cur.execute('DROP TABLE IF EXISTS GoogleMaps')
-cur.execute('CREATE TABLE GoogleMaps (distance TEXT , duration TEXT)')
-
-GoogleMaps = query_GoogleMaps()
-for trip in GoogleMaps:
-    cur.execute('INSERT INTO GoogleMaps(distance, duration) VALUES (?, ?)', 
-                (final['routes'][0]['legs'][0]['distance']['text'], final['routes'][0]['legs'][0]['duration']['text']))
-
-conn.commit()
-
 #API 4 iTunes
 print ('\n------------------------------------\n')
 print ('API #4: iTunes\n')
 
-term = input("Enter your artist: ")
-
-def query_itunes_directly():
+def query_itunes_directly(search_term):
     base_url = "https://itunes.apple.com/search?"
     params_dict = {}
-    params_dict['term'] = term
+    params_dict['term'] = search_term
     params_dict['country'] = "US"
+    params_dict['media'] = "music"
+    params_dict['entity'] = "song"
     r = requests.get(base_url, params=params_dict)
     responses = r.text
     final = json.loads(responses)
-    pprint.pprint(final)
+    return (final['results'])
     
-hi = query_itunes_directly()
+def query_itunes(search_term):
+    return performsearch(search_term, query_itunes_directly)
 
-#SQL table for itunes API
-#change values
+hi = query_itunes("Beyonce")
+printsequence ("aly")
+
+#this is my table for itunes API
+
+Beyonce = query_itunes("Beyonce")
+Bieber = query_itunes("Bieber")
+Miley_Cyrus = query_itunes("Miley")
+songs = Beyonce + Bieber + Miley_Cyrus
+
+#table for itunes API
 cur.execute('DROP TABLE IF EXISTS iTunes')
-cur.execute('CREATE TABLE iTunes(distance TEXT , duration TEXT)')
+cur.execute('CREATE TABLE iTunes(artist TEXT, artistId TEXT, trackName TEXT, trackNumber TEXT)')
 
-
-itunes = query_itunes()
-for search in itunes:
-    cur.execute('INSERT INTO itunes(distance, duration) VALUES (?, ?)', 
-                (final['routes'][0]['legs'][0]['distance']['text'], final['routes'][0]['legs'][0]['duration']['text']))
+for song in songs:
+    cur.execute('INSERT INTO iTunes(artist, artistId, trackName, trackNumber) VALUES (?, ?,?,?)', 
+                (song['artistName'], song['artistId'], song['trackName'], song['trackNumber']))
 
 conn.commit()
+
+#API 5 Pokemon
+print ('\n------------------------------------\n')
+print ('API #4: Pokemon\n')
+
+def query_pokemon_directly(pokemon_number):
+    baseurl = "https://pokeapi.co/api/v2/pokemon/{}/".format(pokemon_number)
+    r = requests.get(baseurl)
+    responses = r.text
+    final = json.loads(responses)
+    return final
+    
+def query_pokemon(pokemon_number):
+    return performsearch(pokemon_number, query_pokemon_directly)
+#SQL table for itunes itunes
+pokemon_response_list = []
+for i in range(1,251):
+    printsequence(i)
+    pokemon_response_list.append(query_pokemon(str(i)))
+
+#create SQL table for pokemon
+cur.execute('DROP TABLE IF EXISTS Pokemon')
+cur.execute('CREATE TABLE Pokemon(id INTEGER, name TEXT , weight INTEGER, height INTEGER, base_experience INTEGER)')
+
+for pokemon in pokemon_response_list:
+    if pokemon != None:
+        cur.execute('INSERT INTO Pokemon(id, name, weight, height, base_experience) VALUES (?, ?, ?,?,?)', 
+                (prep(pokemon['id'], "int"), prep(pokemon['name'], "str"), prep(pokemon['weight'], "int"), prep(pokemon['height'], "int"), prep(pokemon['base_experience'], "int")))
+
+printsequence("hi")
+conn.commit()    
+printsequence("bye")
 
 #Here I will create the visuals
 
