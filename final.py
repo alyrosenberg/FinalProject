@@ -129,7 +129,10 @@ conn.commit()
 
 
 
-#do the days of the week thing here :
+#do the days of the week here :
+
+#find interactions on each day of the week see what is most popular
+
 
 
 #github
@@ -268,8 +271,8 @@ printsequence("bye")
 
 #Here I will create the visuals
 
-#Visual 1:
+#Visual 1 going to be the instagram interactios:
 
-#Visual 2:
+#Visual 2 mapping instagram by location on a map:
 
 #Visual 3:
