@@ -128,6 +128,10 @@ for post in Instagram_Posts:
 conn.commit()
 
 
+
+#do the days of the week thing here :
+
+
 #github
 print ('\n------------------------------------\n')
 print ('API #2: GitHub\n')
