@@ -8,6 +8,10 @@ import pprint
 import requests
 import datetime
 import sys
+import calendar
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
 
 
 def skip_lines(num_lines):
@@ -34,7 +38,7 @@ except:
 def performsearch(search_term, api_query_function):
     cachekey = api_query_function.__name__ + "_" + search_term
     if cachekey in CACHE_DICTION:
-        print ("loading from cache")
+        #print ("loading from cache")
         toreturn = CACHE_DICTION[cachekey]
     else:
         toreturn = api_query_function(search_term)
@@ -49,16 +53,16 @@ conn = sqlite3.connect('206_finalproject.sqlite')
 cur = conn.cursor()
 
 def prep(value, typestring):
-	if typestring == "str":
-		if value == None:
-			return "_"
-		else:
-			return str(value)
-	if typestring == "int":
-		if value == None:
-			return "_"
-		else:
-			return int(value)
+    if typestring == "str":
+        if value == None:
+            return "_"
+        else:
+            return str(value)
+    if typestring == "int":
+        if value == None:
+            return "_"
+        else:
+            return int(value)
 
 #instagram
 print ('API #1: Instagram\n')
@@ -170,7 +174,7 @@ print ('API #3: OMDB\n')
 
 #mykey = 3a894ff0
 
-list_movies = ['Mean Girls','Wonder Woman', 'Get Out', 'Star Wars', 'The Big Sick', 'Lady Bird', 'La La Land', 'It', 'Titanic', 'The Notebook', 'Love Actually']
+
 def query_OMDB_directly(movie_title):
     base_url = "http://www.omdbapi.com/?"
     params_dict = {}
@@ -180,6 +184,7 @@ def query_OMDB_directly(movie_title):
     responses = r.text
     final = json.loads(responses)
     printsequence(final)
+    return final
 
 hi = query_OMDB_directly("star wars")
 
@@ -190,12 +195,16 @@ def query_OMDB(movie_title):
 cur.execute('DROP TABLE IF EXISTS OMDB_Movie')
 cur.execute('CREATE TABLE OMDB_Movie (title TEXT PRIMARY KEY, year INTEGER, genre TEXT, director TEXT, imdbrating REAL)')
 
+mymovies = ['Mean Girls','Wonder Woman', 'Get Out', 'Star Wars', 'The Big Sick', 'Lady Bird', 'La La Land', 'It', 'Titanic', 'The Notebook', 'Love Actually', 'Baby Driver', 'Dunkirk', 'The Fault in Our Stars', 'Endless Love','That Awkward Moment','The Longest Ride', 'Fifty Shades of Grey','Sleeping with Other People','Easy A', 'The Visit', 'The Conjuring', 'Moonlight', 'Jackie', 'Finding Dory', 'Sausage Party']
 
-#getting TYPENONE error here. why?
-for movie in list_movies:
+responses = []
+
+for movie in mymovies:
     movieinfo = query_OMDB(movie)
+    responses.append(movieinfo)
     printsequence(movie)
-    cur.execute('INSERT INTO OMDB_Movie(title, year, genre, director, imdbrating) VALUES (?, ?, ?, ?,?)', 
+    if movieinfo != None:
+        cur.execute('INSERT INTO OMDB_Movie(title, year, genre, director, imdbrating) VALUES (?, ?, ?, ?,?)', 
                 (movieinfo['Title'], movieinfo['Year'], movieinfo['Genre'], movieinfo["Director"], movieinfo['imdbRating']))
 
 conn.commit()
@@ -275,6 +284,46 @@ printsequence("bye")
 
 #Visual 1 going to be the instagram interactios:
 
-#Visual 2 mapping instagram by location on a map:
+#Visual 2 pie chart of movie genres:
+plotly.tools.set_credentials_file(username='alyrosenberg', api_key='KqdFFr008XxE3bq2F6Cz')
+labels = ['Drama','Comedy','Action','Horror', 'Biography', 'Animation']
+drama = []
+comedy = []
+action = []
+horror = []
+biography = []
+animation = []
+for movie in responses:
+    listgenres = movie['Genre'].split(',')
+    genre = listgenres[0]
+    print(movie['Title'])
+    print(genre)
+    if genre == 'Drama':
+        drama.append(movie['Title'])
+    if genre == 'Comedy':
+        comedy.append(movie['Title'])
+    if genre == 'Action':
+        action.append(movie['Title'])
+    if genre == 'Horror':
+        horror.append(movie['Title'])
+    if genre == 'Biography':
+        biography.append(movie['Title'])
+    if genre == 'Animation':
+        animation.append(movie['Title'])
+
+
+values = [len(drama), len(comedy), len(action),len(horror), len(biography), len(animation)]
+
+trace = go.Pie(labels=labels, values=values)
+
+colors = ['#a18bd2', '#FFBAD2', '#fc2a70', '##f9b152', '#ecf986', '#ddfff7']
+
+trace = go.Pie(labels=labels, values=values,
+               hoverinfo='label+percent', textinfo='value', 
+               textfont=dict(size=20),
+               marker=dict(colors=colors, 
+                           line=dict(color='#000000', width=2)))
+
+py.iplot([trace], filename='Pie Chart of Movie Genres')
 
 #Visual 3:
