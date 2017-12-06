@@ -190,6 +190,8 @@ def query_OMDB(movie_title):
 cur.execute('DROP TABLE IF EXISTS OMDB_Movie')
 cur.execute('CREATE TABLE OMDB_Movie (title TEXT PRIMARY KEY, year INTEGER, genre TEXT, director TEXT, imdbrating REAL)')
 
+
+#getting TYPENONE error here. why?
 for movie in list_movies:
     movieinfo = query_OMDB(movie)
     printsequence(movie)
