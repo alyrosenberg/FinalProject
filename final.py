@@ -1,3 +1,6 @@
+#Alyson Rosenberg
+#SI 206 Final Project
+
 import json
 import sqlite3
 import pprint
